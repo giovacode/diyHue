@@ -52,14 +52,16 @@ def sendLightRequest(light, data, lights, addresses, rgb = None, entertainmentHo
             else:
                 if "bri" in data:
                     bri = data["bri"]
-                bri = int(bri)
+                    bri = int(bri)
+                else:
+                    bri = lights[light]["state"]["bri"]
+                    bri = int(bri)
                 if lights[light]["hascolor"]:
                     url += "&param=setcolbrightnessvalue"
                     color_data = {}
 
                     old_light_state = lights[light]["state"]
                     colormode = old_light_state["colormode"]
-                    bri = old_light_state["bri"]
                     if colormode == "ct":
                         ct = old_light_state["ct"]
                     if colormode == "xy":
