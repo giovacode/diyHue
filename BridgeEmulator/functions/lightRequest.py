@@ -55,15 +55,17 @@ def sendLightRequest(light, data, lights, addresses, rgb = None, entertainmentHo
                 else:
                     bri = lights[light]["state"]["bri"]
                     bri = int(bri)
-                if lights[light]["hascolor"]:
+                if "colormode" in lights[light]["state"]: # lights[light]["hascolor"]:
                     url += "&param=setcolbrightnessvalue"
 
                     if  "hue" in data and "sat" in data:
                         logging.debug("read as hue/sat cmd")
                         hue = data["hue"]
                         sat = data["sat"]
-                        
-                        rgbValue = hsv_to_rgb(hue,sat,254) #hsv_to_rgb( round(float(hue) / 65535), round(float(sat) / 255), round(float(bri) / 255))
+                        if hue == 0 and sat == 0 : #white
+                            rgbValue = [255, 255, 255]
+                        else:
+                            rgbValue = hsv_to_rgb(hue,sat,254) #hsv_to_rgb( round(float(hue) / 65535), round(float(sat) / 255), round(float(bri) / 255))
 
                         color_data = {}
                         color_data["m"] = 3
