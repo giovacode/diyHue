@@ -21,3 +21,6 @@ config
 .idea/*
 !.idea/docker/
 !.idea/runConfigurations/
+BridgeEmulator/config copy.json
+BridgeEmulator/.vscode/launch.json
+BridgeEmulator/.vscode/settings.json

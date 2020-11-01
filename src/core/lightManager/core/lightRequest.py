@@ -43,55 +43,71 @@ def sendLightRequest(light, data, lights, addresses, rgb = None, entertainmentHo
         elif addresses[light]["protocol"] == "domoticz": #Domoticz protocol
             url = "http://" + addresses[light]["ip"] + "/json.htm?type=command&idx=" + addresses[light]["light_id"]
             method = 'GET'
-            if "on" in data and not "bri" in data and not "ct" in data and not "xy" in data:
-                for key, value in data.items():
-                    url += "&param=switchlight"
-                    if key == "on":
-                        if value:
-                            url += "&switchcmd=On"
-                        else:
-                            url += "&switchcmd=Off"
+            if "on" in data and len(data) == 1:
+                logging.debug("read as on/off swith cmd")
+                url += "&param=switchlight"
+                if data["on"]:
+                    url += "&switchcmd=On"
+                else:
+                    url += "&switchcmd=Off"
             else:
                 if "bri" in data:
                     bri = data["bri"]
+                else:
+                    bri = lights[light]["state"]["bri"]
                 bri = int(bri)
-                if lights[light]["hascolor"]:
+                if "colormode" in lights[light]["state"]: # lights[light]["hascolor"]:
                     url += "&param=setcolbrightnessvalue"
-                    color_data = {}
 
-                    old_light_state = lights[light]["state"]
-                    colormode = old_light_state["colormode"]
-                    bri = old_light_state["bri"]
-                    if colormode == "ct":
-                        ct = old_light_state["ct"]
-                    if colormode == "xy":
-                        xy = old_light_state["xy"]
-
-                    if "ct" in data:
-                        ct = data["ct"]
-                    if "xy" in data:
-                        xy = data["xy"]
-
-                    color_data["m"] = 1 #0: invalid, 1: white, 2: color temp, 3: rgb, 4: custom
-                    if colormode == "ct":
-                        color_data["m"] = 2
-                        ct01 = (ct - 153) / (500 - 153) #map color temperature from 153-500 to 0-1
-                        ct255 = ct01 * 255 #map color temperature from 0-1 to 0-255
-                        color_data["t"] = ct255
-                    elif colormode == "xy":
-                        color_data["m"] = 3
-                        if rgb:
-                            (color_data["r"], color_data["g"], color_data["b"]) = rgbBrightness(rgb, bri)
+                    if  "hue" in data and "sat" in data:
+                        logging.debug("read as hue/sat cmd")
+                        hue = data["hue"]
+                        sat = data["sat"]
+                        if hue == 0 and sat == 0 : #white
+                            rgbValue = [255, 255, 255]
                         else:
-                            (color_data["r"], color_data["g"], color_data["b"]) = convert_xy(xy[0], xy[1], bri)
+                            rgbValue = hsv_to_rgb(hue,sat,254) #hsv_to_rgb( round(float(hue) / 65535), round(float(sat) / 255), round(float(bri) / 255))
+
+                        color_data = {}
+                        color_data["m"] = 3
+                        (color_data["r"], color_data["g"], color_data["b"]) = rgbValue 
+
+                    else: 
+                        logging.debug("read as rgbww cmd")
+                        # assert data["on"] and data["xy"]
+                        color_data = {}
+
+                        old_light_state = lights[light]["state"]
+                        colormode = old_light_state["colormode"]
+                        if colormode == "ct":
+                            ct = old_light_state["ct"]
+                        if colormode == "xy":
+                            xy = old_light_state["xy"]
+
+                        if "ct" in data:
+                            ct = data["ct"]
+                        if "xy" in data:
+                            xy = data["xy"]
+
+                        color_data["m"] = 1 #0: invalid, 1: white, 2: color temp, 3: rgb, 4: custom
+                        if colormode == "ct":
+                            color_data["m"] = 2
+                            ct01 = (ct - 153) / (500 - 153) #map color temperature from 153-500 to 0-1
+                            ct255 = ct01 * 255 #map color temperature from 0-1 to 0-255
+                            color_data["t"] = ct255
+                        elif colormode == "xy":
+                            color_data["m"] = 3
+                            if rgb:
+                                (color_data["r"], color_data["g"], color_data["b"]) = rgbBrightness(rgb, bri)
+                            else:
+                                (color_data["r"], color_data["g"], color_data["b"]) = convert_xy(xy[0], xy[1], bri)
                     url += "&color="+json.dumps(color_data)
                     url += "&brightness=" + str(round(float(bri)/255*100))
-                else:
-                    url += "&param=switchlight&switchcmd=Set%20Level&level=" + str(bri)
+                else: # bri
+                    url += "&param=switchlight&switchcmd=Set%20Level&level=" + str(round(float(bri)/255*100))
 
             urlObj = {}
             urlObj["url"] = url
-
         elif addresses[light]["protocol"] == "jeedom": #Jeedom protocol
             url = "http://" + addresses[light]["ip"] + "/core/api/jeeApi.php?apikey=" + addresses[light]["light_api"] + "&type=cmd&id="
             method = 'GET'
